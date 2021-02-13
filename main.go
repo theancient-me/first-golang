@@ -2,8 +2,13 @@ package main
 
 import "C"
 import (
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo/v4"
+	"math/rand"
 	"net/http"
+	"time"
 )
 
 
@@ -16,8 +21,20 @@ type PostOriginalUrl struct {
 	Url  string `json:"url" form:"url" query:"url"`
 }
 
+func generateShortUrl(n int) string {
+
+	var letters = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	var b string;
+	for i := 0 ; i<n ;i++ {
+		b = b + string(letters[rand.Intn(len(letters))])
+	}
+	return b
+}
+
 func main() {
 	e := echo.New()
+
+	rand.Seed(time.Now().UnixNano())
 
 	e.GET("/", func(c echo.Context) error {
 		  res := &ResponseJson{
@@ -42,6 +59,28 @@ func main() {
 			}
 			return c.JSON(http.StatusUnprocessableEntity,res)
 		}
+
+		db, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/testsck")
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		defer db.Close()
+
+		fmt.Println(body.Url)
+		short_url := generateShortUrl(4) //generate short_url
+		//short_url = "b5.ntpl.me/"+short_url
+		fmt.Println(short_url)
+
+		insert, err := db.Query(`INSERT INTO url (full_url, short_url) VALUES ( ?, ? )`, body.Url, short_url)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		defer insert.Close()
+
 		return c.JSON(http.StatusOK, body)
 	})
 	
