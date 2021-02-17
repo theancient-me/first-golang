@@ -83,7 +83,36 @@ func main() {
 
 	e.GET("/:refUrl", func(c echo.Context) error {
 		refUrl := c.Param("refUrl")
-		return c.String(http.StatusOK, refUrl)
+		db, err := sql.Open("mysql","root:@tcp(127.0.0.1:3306)/testsck")
+		if err != nil {
+			panic(err.Error())
+		}
+
+		defer db.Close()
+
+		result, err := db.Query("select * from url where short_url = ?", refUrl)
+
+		if err != nil{
+			panic(err.Error())
+		}
+
+		var fullUrl string;
+
+		for result.Next(){
+			var url Url
+			err = result.Scan(&url.FullUrl, &url.ShortUrl)
+			if err != nil {
+				panic(err.Error())
+			}
+			fullUrl = url.FullUrl
+		}
+
+		res := &ResponseJson{
+			Status: 200,
+			Message: fullUrl,
+		}
+
+		return c.JSON(http.StatusOK, res)
 	})
 	
 	e.POST("/shortUrl", func(c echo.Context) (err error) {
@@ -125,7 +154,11 @@ func main() {
 
 		defer insert.Close()
 
-		return c.JSON(http.StatusOK, body)
+		res := &ResponseJson{
+			Status: 200,
+			Message: "b5.tnpl.me/"+short_url,
+		}
+		return c.JSON(http.StatusOK, res )
 	})
 	
 	e.Logger.Fatal(e.Start(":3500"))
