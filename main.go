@@ -11,6 +11,17 @@ import (
 	"time"
 )
 
+const (  
+    username = ""
+    password = ""
+    hostname = ""
+    dbname   = ""
+)
+
+func dsn(dbName string) string {  
+    return fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, hostname, dbName)
+}
+
 
 type ResponseJson struct {
 	Status int 
@@ -28,7 +39,7 @@ type Url struct {
 
 func findShortUrl(key string) bool{
 
-	db, err := sql.Open("mysql","root:@tcp(127.0.0.1:3306)/testsck")
+	db, err := sql.Open("mysql",dsn(dbname))
 
 	if err != nil {
 		panic(err.Error())
@@ -83,7 +94,7 @@ func main() {
 
 	e.GET("/:refUrl", func(c echo.Context) error {
 		refUrl := c.Param("refUrl")
-		db, err := sql.Open("mysql","root:@tcp(127.0.0.1:3306)/testsck")
+		db, err := sql.Open("mysql",dsn(dbname))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -126,7 +137,7 @@ func main() {
 			return c.JSON(http.StatusUnprocessableEntity,res)
 		}
 
-		db, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/testsck")
+		db, err := sql.Open("mysql",dsn(dbname))
 
 		if err != nil {
 			panic(err.Error())
