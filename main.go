@@ -22,10 +22,9 @@ func dsn(dbName string) string {
     return fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, hostname, dbName)
 }
 
-
 type ResponseJson struct {
 	Status int 
-	Message string `json:"message" xml:"message"`
+	Message string `json:"link" xml:"link"`
 }
 
 type PostOriginalUrl struct {
@@ -119,11 +118,11 @@ func main() {
 		}
 
 		res := &ResponseJson{
-			Status: 200,
+			Status: 302,
 			Message: fullUrl,
 		}
 
-		return c.JSON(http.StatusOK, res)
+		return c.JSON(http.StatusFound, res)
 	})
 	
 	e.POST("/shortUrl", func(c echo.Context) (err error) {
@@ -167,7 +166,7 @@ func main() {
 
 		res := &ResponseJson{
 			Status: 200,
-			Message: "b5.tnpl.me/"+short_url,
+			Message: "http://sh.b5.tnpl.me/"+short_url,
 		}
 		return c.JSON(http.StatusOK, res )
 	})
