@@ -116,7 +116,7 @@ func main() {
 			}
 			fullUrl = url.FullUrl
 		}
-
+		c.Response().Header().Set("Location", fullUrl)
 		res := &ResponseJson{
 			Status: 302,
 			Message: fullUrl,
@@ -172,4 +172,3 @@ func main() {
 	})
 	
 	e.Logger.Fatal(e.Start(":3500"))
-}
