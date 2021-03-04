@@ -84,16 +84,16 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	e.GET("/", func(c echo.Context) error {
-		  res := &ResponseJson{
-			  Status : 200,
-			  Message : "OK",
-		  }
-		  return c.JSON(http.StatusOK, res)
+		res := &ResponseJson{
+			Status:  200,
+			Message: "OK",
+		}
+		return c.JSON(http.StatusOK, res)
 	})
 
-	e.GET("/:refUrl", func(c echo.Context) error {
+	e.GET("/l/:refUrl", func(c echo.Context) error {
 		refUrl := c.Param("refUrl")
-		db, err := sql.Open("mysql",dsn(dbname))
+		db, err := sql.Open("mysql", dsn(dbname))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -102,13 +102,13 @@ func main() {
 
 		result, err := db.Query("select * from url where short_url = ?", refUrl)
 
-		if err != nil{
+		if err != nil {
 			panic(err.Error())
 		}
 
 		var fullUrl string;
 
-		for result.Next(){
+		for result.Next() {
 			var url Url
 			err = result.Scan(&url.FullUrl, &url.ShortUrl)
 			if err != nil {
@@ -118,25 +118,25 @@ func main() {
 		}
 		c.Response().Header().Set("Location", fullUrl)
 		res := &ResponseJson{
-			Status: 302,
+			Status:  302,
 			Message: fullUrl,
 		}
 
 		return c.JSON(http.StatusFound, res)
 	})
-	
-	e.POST("/shortUrl", func(c echo.Context) (err error) {
+
+	e.POST("/link", func(c echo.Context) (err error) {
 		body := new(PostOriginalUrl)
 
 		if err = c.Bind(body); err != nil {
 			res := &ResponseJson{
-				Status: 422,
+				Status:  422,
 				Message: "url can't be empty",
 			}
-			return c.JSON(http.StatusUnprocessableEntity,res)
+			return c.JSON(http.StatusUnprocessableEntity, res)
 		}
 
-		db, err := sql.Open("mysql",dsn(dbname))
+		db, err := sql.Open("mysql", dsn(dbname))
 
 		if err != nil {
 			panic(err.Error())
@@ -165,10 +165,11 @@ func main() {
 		defer insert.Close()
 
 		res := &ResponseJson{
-			Status: 200,
-			Message: "http://sh.b5.tnpl.me/"+short_url,
+			Status:  200,
+			Message: "http://sh.b5.tnpl.me/l/" + short_url,
 		}
-		return c.JSON(http.StatusOK, res )
+		return c.JSON(http.StatusOK, res)
 	})
-	
+
 	e.Logger.Fatal(e.Start(":3500"))
+}
