@@ -34,6 +34,7 @@ type PostOriginalUrl struct {
 type Url struct {
 	FullUrl string `json:"full_url"`
 	ShortUrl string `json:"short_url"`
+	Visit int `json:"visit"`
 }
 
 func findShortUrl(key string) bool{
@@ -98,9 +99,9 @@ func main() {
 			panic(err.Error())
 		}
 
-		defer db.Close()
+		defer db.Close();
 
-		result, err := db.Query("select * from url where short_url = ?", refUrl)
+		result, err := db.Query("select full_url, short_url, visits from url where short_url = ?", refUrl)
 
 		if err != nil {
 			panic(err.Error())
@@ -110,10 +111,15 @@ func main() {
 
 		for result.Next() {
 			var url Url
-			err = result.Scan(&url.FullUrl, &url.ShortUrl)
+			var visit int
+			err = result.Scan(&url.FullUrl, &url.ShortUrl, &url.Visit)
+			visit = url.Visit + 1;
+
+			update, err := db.Query("update url set visits = ? where short_url = ?", visit, refUrl)
 			if err != nil {
 				panic(err.Error())
 			}
+			defer update.Close()
 			fullUrl = url.FullUrl
 		}
 		c.Response().Header().Set("Location", fullUrl)
@@ -123,6 +129,41 @@ func main() {
 		}
 
 		return c.JSON(http.StatusFound, res)
+		return c.String(http.StatusOK,"http.StatusOK");
+	})
+
+	e.GET("/l/:refUrl/stat", func(c echo.Context) error {
+		refUrl := c.Param("refUrl")
+
+		db, err := sql.Open("mysql",dsn(dbname))
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		result, err := db.Query("select visits from url where short_url = ?", refUrl);
+
+		if err !=nil {
+			panic(err.Error())
+		}
+
+		var visit int;
+		for result.Next() {
+			var url Url
+			err = result.Scan(&url.Visit)
+			if err != nil {
+				panic(err.Error())
+			}
+			visit = url.Visit
+		}
+
+
+		res := &ResponseStatJson{
+			Status: 200,
+			Message: visit,
+		}
+
+		return c.JSON(http.StatusOK, res);
 	})
 
 	e.POST("/link", func(c echo.Context) (err error) {
