@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const (  
+const (
     username = ""
     password = ""
     hostname = ""
@@ -25,6 +25,11 @@ func dsn(dbName string) string {
 type ResponseJson struct {
 	Status int 
 	Message string `json:"link" xml:"link"`
+}
+
+type ResponseStatJson struct {
+	Status int
+	Message int `json:"visit"`
 }
 
 type PostOriginalUrl struct {
