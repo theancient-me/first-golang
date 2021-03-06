@@ -1,6 +1,5 @@
 package main
 
-import "C"
 import (
 	"database/sql"
 	"fmt"
@@ -12,13 +11,30 @@ import (
 )
 
 const (
-    username = ""
-    password = ""
-    hostname = ""
-    dbname   = ""
+	username = ""
+	password = ""
+	hostname = ""
+	dbname   = ""
 )
 
-func dsn(dbName string) string {  
+func OpenConnection() *sql.DB {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, hostname, dbname)
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		panic(err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+	db.SetMaxOpenConns(0)
+	db.SetMaxIdleConns(500)
+
+	return db
+}
+
+func dsn(dbName string) string {
     return fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, hostname, dbName)
 }
 
@@ -44,11 +60,13 @@ type Url struct {
 
 func findShortUrl(key string) bool{
 
-	db, err := sql.Open("mysql",dsn(dbname))
+	//db, err := sql.Open("mysql",dsn(dbname))
+	//
+	//if err != nil {
+	//	panic(err.Error())
+	//}
 
-	if err != nil {
-		panic(err.Error())
-	}
+	db := OpenConnection()
 
 	defer db.Close();
 
@@ -86,7 +104,6 @@ func generateShortUrl(n int) string {
 
 func main() {
 	e := echo.New()
-
 	rand.Seed(time.Now().UnixNano())
 
 	e.GET("/", func(c echo.Context) error {
@@ -97,75 +114,53 @@ func main() {
 		return c.JSON(http.StatusOK, res)
 	})
 
+
 	e.GET("/l/:refUrl", func(c echo.Context) error {
+		var url Url
 		refUrl := c.Param("refUrl")
-		db, err := sql.Open("mysql", dsn(dbname))
+
+		db := OpenConnection()
+		defer db.Close()
+
+		row := db.QueryRow(`SELECT full_url, short_url, visits FROM url WHERE short_url = ?`, refUrl)
+
+		err := row.Scan(&url.FullUrl, &url.ShortUrl, &url.Visit)
+		updated, _ := db.Query(`update url set visits = visits+1 where short_url = ?`, refUrl)
+		updated.Close()
 		if err != nil {
 			panic(err.Error())
 		}
-
-		defer db.Close();
-
-		result, err := db.Query("select full_url, short_url, visits from url where short_url = ?", refUrl)
-
-		if err != nil {
-			panic(err.Error())
-		}
-
-		var fullUrl string;
-
-		for result.Next() {
-			var url Url
-			var visit int
-			err = result.Scan(&url.FullUrl, &url.ShortUrl, &url.Visit)
-			visit = url.Visit + 1;
-
-			update, err := db.Query("update url set visits = ? where short_url = ?", visit, refUrl)
-			if err != nil {
-				panic(err.Error())
-			}
-			defer update.Close()
-			fullUrl = url.FullUrl
-		}
-		c.Response().Header().Set("Location", fullUrl)
+		c.Response().Header().Set("Location", url.FullUrl)
 		res := &ResponseJson{
 			Status:  302,
-			Message: fullUrl,
+			Message: url.FullUrl,
 		}
-
 		return c.JSON(http.StatusFound, res)
+
 		return c.String(http.StatusOK,"http.StatusOK");
+
 	})
 
 	e.GET("/l/:refUrl/stat", func(c echo.Context) error {
+		var url Url
 		refUrl := c.Param("refUrl")
 
-		db, err := sql.Open("mysql",dsn(dbname))
+		//db, err := sql.Open("mysql",dsn(dbname))
+		//
+		//if err != nil {
+		//	panic(err.Error())
+		//}
+		db := OpenConnection()
 
+		result := db.QueryRow("select visits from url where short_url = ?", refUrl);
+		err := result.Scan(&url.Visit)
 		if err != nil {
 			panic(err.Error())
 		}
 
-		result, err := db.Query("select visits from url where short_url = ?", refUrl);
-
-		if err !=nil {
-			panic(err.Error())
-		}
-
-		var visit int;
-		for result.Next() {
-			var url Url
-			err = result.Scan(&url.Visit)
-			if err != nil {
-				panic(err.Error())
-			}
-			visit = url.Visit
-		}
-
-
 		res := &ResponseStatJson{
 			Status: 200,
-			Message: visit,
+			Message: url.Visit,
 		}
 
 		return c.JSON(http.StatusOK, res);
@@ -182,11 +177,13 @@ func main() {
 			return c.JSON(http.StatusUnprocessableEntity, res)
 		}
 
-		db, err := sql.Open("mysql", dsn(dbname))
+		//db, err := sql.Open("mysql", dsn(dbname))
+		//
+		//if err != nil {
+		//	panic(err.Error())
+		//}
 
-		if err != nil {
-			panic(err.Error())
-		}
+		db := OpenConnection()
 
 		defer db.Close()
 
